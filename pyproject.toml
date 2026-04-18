@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "magicbind"
+version = "0.1.0"
+description = "Automatically build and install Python extension modules from C++ headers"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "libclang>=18.1.1",
+    "nanobind>=2.12.0",
+    "numpy>=2.4.4",
+    "ziglang>=0.14.0",
+]
+
+[project.scripts]
+magicbind = "magicbind.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
