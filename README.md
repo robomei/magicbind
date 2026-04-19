@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/robomei/magicbind/actions/workflows/ci.yml/badge.svg)](https://github.com/robomei/magicbind/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/magicbind)](https://pypi.org/project/magicbind/)
-[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/magicbind)](https://pypi.org/project/magicbind/)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/magicbind?cacheSeconds=300)](https://pypi.org/project/magicbind/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 The easy way to speed up Python bottlenecks with C++. No CMake, no build system, no boilerplate. Just point magicbind at your header and it takes care of the rest.
@@ -109,11 +109,11 @@ import image_ops
 
 img = np.zeros((480, 640, 3), dtype=np.uint8)
 
-blurred       = image_ops.blur(img, 11)          # numpy array
-gray          = image_ops.to_grayscale(img)       # numpy array
-w, h          = image_ops.image_size(img)         # tuple
-cropped       = image_ops.crop(img, (10, 10, 100, 100))  # rect as tuple
-b, g, r, _   = image_ops.mean_color(img)         # scalar as tuple
+blurred = image_ops.blur(img, 11)                   # numpy array
+gray = image_ops.to_grayscale(img)                  # numpy array
+w, h = image_ops.image_size(img)                    # tuple
+cropped = image_ops.crop(img, (10, 10, 100, 100))   # rect as tuple
+b, g, r, _ = image_ops.mean_color(img)              # scalar as tuple
 ```
 
 Supported types: `cv::Mat` ↔ `numpy.ndarray`, `cv::Point` / `cv::Size` / `cv::Rect` / `cv::Scalar` ↔ tuple, and their typed variants (`cv::Point2f`, `cv::Rect2d`, etc.).
