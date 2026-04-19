@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import importlib
+import shutil
 import sys
-import tempfile
 from pathlib import Path
 
 from magicbind.cli import (
@@ -35,11 +35,22 @@ def magicbind(line: str, cell: str) -> None:
     args = parse_argstring(_parser, line)
     module_name = args.module
 
-    build_dir = build_dir_for(module_name)
+    # use a versioned internal name so the old .so is never unloaded
+    old_versions = [k for k in sys.modules if k.startswith(f"_mb_{module_name}_v")]
+    version = len(old_versions)
+    internal_name = f"_mb_{module_name}_v{version}"
+
+    # clean up old build dirs (the .so stays loaded in memory but we don't need the files)
+    for old in old_versions:
+        old_dir = build_dir_for(old)
+        if old_dir.exists():
+            shutil.rmtree(old_dir)
+
+    build_dir = build_dir_for(internal_name)
     build_dir.mkdir(parents=True, exist_ok=True)
 
     # write cell to a temp header so libclang can parse it
-    header = build_dir / f"{module_name}.h"
+    header = build_dir / f"{internal_name}.h"
     header.write_text(cell)
 
     extra_flags: list[str] = []
@@ -57,15 +68,15 @@ def magicbind(line: str, cell: str) -> None:
     print(f"[magicbind] generating bindings for {module_name}...")
     code = generate_from_header(
         header=header,
-        module_name=module_name,
+        module_name=internal_name,
         clang_args=include_flags,
     )
-    generated_cpp = build_dir / f"{module_name}.cpp"
+    generated_cpp = build_dir / f"{internal_name}.cpp"
     generated_cpp.write_text(code)
 
-    built_extension = build_dir / f"{module_name}{ext_suffix()}"
+    built_extension = build_dir / f"{internal_name}{ext_suffix()}"
     compile_extension(
-        module_name=module_name,
+        module_name=internal_name,
         generated_cpp=generated_cpp,
         header=header,
         sources=[],
@@ -75,15 +86,11 @@ def magicbind(line: str, cell: str) -> None:
         verbose=False,
     )
 
-    installed_path = install_extension(built_extension, module_name)
+    install_extension(built_extension, internal_name)
     print(f"[magicbind] installed — use: import {module_name}")
 
-    # inject into notebook namespace
-    if module_name in sys.modules:
-        module = importlib.reload(sys.modules[module_name])
-    else:
-        module = importlib.import_module(module_name)
-
+    module = importlib.import_module(internal_name)
+    module.__name__ = module_name
     ip.push({module_name: module})
     print(f"[magicbind] '{module_name}' is ready")
 
