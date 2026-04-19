@@ -143,7 +143,7 @@ math_utils.sum([1.0, 2.0, 3.0])  # 6.0
 
 The module is compiled and imported automatically. Re-running the cell recompiles and reloads. Requires magicbind in your environment.
 
-See [`examples/notebook/magicbind_demo.ipynb`](examples/notebook/magicbind_demo.ipynb) for a full demo.
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/robomei/magicbind/blob/main/examples/notebook/magicbind_demo.ipynb)
 
 ## How it works
 
