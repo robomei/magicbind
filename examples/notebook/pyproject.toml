@@ -1,7 +1,7 @@
 [project]
 name = "notebook-example"
 version = "0.1.0"
-requires-python = ">=3.14"
+requires-python = ">=3.12"
 dependencies = [
     "magicbind>=0.1.0",
     "jupyter",
