@@ -185,8 +185,9 @@ def pkg_config_flags(packages: list[str]) -> list[str]:
     return result.stdout.split()
 
 
-def _run_cmd(cmd: list[str]) -> None:
-    print(f"[build] {' '.join(cmd)}")
+def _run_cmd(cmd: list[str], verbose: bool = True) -> None:
+    if verbose:
+        print(f"[build] {' '.join(cmd)}")
     result = subprocess.run(cmd)
     if result.returncode != 0:
         raise SystemExit(result.returncode)
@@ -200,6 +201,7 @@ def compile_extension(
     output_path: Path,
     extra_flags: list[str] | None = None,
     system_compiler: bool = False,
+    verbose: bool = True,
 ) -> None:
     compiler, kind = find_compiler(system=system_compiler)
     flags = extra_flags or []
@@ -213,7 +215,7 @@ def compile_extension(
         "-I", str(header.parent),
     ]
     build = _build_msvc_cmd if kind == "msvc" else _build_unix_cmd
-    _run_cmd(build(compiler, all_sources, includes, flags, output_path))
+    _run_cmd(build(compiler, all_sources, includes, flags, output_path), verbose=verbose)
 
 
 def install_extension(built_path: Path, module_name: str) -> Path:
