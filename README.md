@@ -1,5 +1,10 @@
 # magicbind
 
+[![CI](https://github.com/robomei/magicbind/actions/workflows/ci.yml/badge.svg)](https://github.com/robomei/magicbind/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/magicbind)](https://pypi.org/project/magicbind/)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/magicbind)](https://pypi.org/project/magicbind/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 The easy way to speed up Python bottlenecks with C++. No CMake, no build system, no boilerplate. Just point magicbind at your header and it takes care of the rest.
 
 ```bash
