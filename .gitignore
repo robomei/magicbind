@@ -11,3 +11,7 @@ wheels/
 
 # magicbind build artifacts
 .magicbind/
+
+# Jupyter
+.ipynb_checkpoints/
+mandelbrot.png

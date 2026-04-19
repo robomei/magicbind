@@ -118,6 +118,33 @@ b, g, r, _   = image_ops.mean_color(img)         # scalar as tuple
 
 Supported types: `cv::Mat` ↔ `numpy.ndarray`, `cv::Point` / `cv::Size` / `cv::Rect` / `cv::Scalar` ↔ tuple, and their typed variants (`cv::Point2f`, `cv::Rect2d`, etc.).
 
+## Jupyter
+
+Write C++ directly in a notebook cell:
+
+```python
+%load_ext magicbind
+```
+
+```cpp
+%%magicbind math_utils
+#include <vector>
+
+double sum(const std::vector<double>& v) {
+    double s = 0;
+    for (auto x : v) s += x;
+    return s;
+}
+```
+
+```python
+math_utils.sum([1.0, 2.0, 3.0])  # 6.0
+```
+
+The module is compiled and imported automatically. Re-running the cell recompiles and reloads. Requires magicbind in your environment.
+
+See [`examples/notebook/magicbind_demo.ipynb`](examples/notebook/magicbind_demo.ipynb) for a full demo.
+
 ## How it works
 
 magicbind uses libclang to parse the header into an intermediate representation, generates a nanobind binding file, and compiles everything in a single `zig c++` (or system compiler) invocation. Build artifacts go into `.magicbind/build/` and the compiled extension is installed directly into site-packages.
