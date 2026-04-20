@@ -231,7 +231,7 @@ def _run_cmd(cmd: list[str], verbose: bool = True, env: dict[str, str] | None = 
         print(f"[build] {' '.join(cmd)}")
     result = subprocess.run(cmd, env=env)
     if result.returncode != 0:
-        raise SystemExit(result.returncode)
+        raise RuntimeError(f"compiler exited with code {result.returncode}")
 
 
 def compile_extension(
@@ -460,7 +460,11 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
-    return args.func(args)
+    try:
+        return args.func(args)
+    except RuntimeError as e:
+        print(f"[magicbind] error: {e}", file=sys.stderr)
+        return 1
 
 
 if __name__ == "__main__":
