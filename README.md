@@ -28,19 +28,16 @@ Given a header:
 ```cpp
 // math_utils.h
 #include <vector>
-#include <optional>
 
-double sum(const std::vector<double>& values);
-std::optional<double> mean(const std::vector<double>& values);
-double clamp(double value, double lo, double hi);
+inline double sum(const std::vector<double>& values) {
+    double s = 0;
+    for (auto x : values) s += x;
+    return s;
+}
 ```
 
-If there is a `math_utils.cpp` next to the header, magicbind picks it up automatically. You can also pass source files explicitly. If everything is defined in the header, no source file is needed.
-
 ```bash
-magicbind add math_utils.h                    # auto-detects math_utils.cpp
-magicbind add math_utils.h --source other.cpp # explicit
-magicbind add math_utils.h --source a.cpp --source b.cpp
+magicbind add math_utils.h
 ```
 
 Then use it from Python:
@@ -48,14 +45,16 @@ Then use it from Python:
 ```python
 import math_utils
 
-math_utils.sum([1, 2, 3])       # 6.0
-math_utils.mean([])             # None
-math_utils.clamp(10, 0, 5)      # 5.0
+math_utils.sum([1, 2, 3])  # 6.0
 ```
 
-STL types are converted automatically: `std::vector` becomes a list, `std::optional` becomes `None` or a value, `std::pair` becomes a tuple.
+If the implementation is in a `.cpp` file instead, magicbind auto-detects it. You can also pass sources explicitly:
 
-## System libraries
+```bash
+magicbind add math_utils.h --source math_utils.cpp
+```
+
+## System libraries (optional)
 
 To use a library installed on your system, pass `--pkg` with its pkg-config name:
 
@@ -65,14 +64,17 @@ magicbind add image_ops.h --pkg opencv4 --system-compiler
 
 `--system-compiler` is required when linking against system C++ libraries. The default Zig compiler is great for self-contained code, but system libraries like OpenCV were compiled with a different C++ runtime, so you need the system's g++ or clang++ to match.
 
-You can also specify include and link paths manually:
+On Linux and macOS you can use `--pkg` to resolve flags automatically via pkg-config. On Windows, pkg-config is not available; use `--include`, `--lib`, and `--link` to specify paths manually:
 
 ```bash
 magicbind add mylib.h \
-  --include /opt/mylib/include \
-  --lib /opt/mylib/lib \
-  --link mylib
+  --include C:\mylib\include \
+  --lib C:\mylib\lib \
+  --link mylib \
+  --system-compiler
 ```
+
+On Windows, magicbind automatically configures the MSVC build environment via `vswhere.exe`. Visual Studio or the standalone [Build Tools](https://aka.ms/vs/stable/vs_BuildTools.exe) must be installed (select the "Desktop development with C++" workload).
 
 ## Rebuilding
 
