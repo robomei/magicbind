@@ -54,6 +54,7 @@ def magicbind(line: str, cell: str) -> None:
     header.write_text(cell)
 
     extra_flags: list[str] = []
+    extra_flags += [f"-DNB_DOMAIN={internal_name}"]
     for path in args.include:
         extra_flags += ["-I", path]
     for name in args.link:
@@ -87,9 +88,9 @@ def magicbind(line: str, cell: str) -> None:
     )
 
     install_extension(built_extension, internal_name)
-    print(f"[magicbind] installed — use: import {module_name}")
 
     module = importlib.import_module(internal_name)
+
     module.__name__ = module_name
     ip.push({module_name: module})
     print(f"[magicbind] '{module_name}' is ready")

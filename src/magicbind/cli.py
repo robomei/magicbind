@@ -29,29 +29,61 @@ def _find_zig() -> str | None:
     return shutil.which("zig")
 
 
-def find_compiler(system: bool = False) -> tuple[list[str], str]:
-    """Return (compiler_cmd, kind) where kind is "unix" or "msvc".
+def _msvc_environment() -> dict[str, str] | None:
+    vswhere = Path(r"C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe")
+    if not vswhere.exists():
+        return None
+    result = subprocess.run(
+        [str(vswhere), "-latest", "-property", "installationPath"],
+        capture_output=True, text=True,
+    )
+    if result.returncode != 0 or not result.stdout.strip():
+        return None
+    vcvars = Path(result.stdout.strip()) / "VC" / "Auxiliary" / "Build" / "vcvars64.bat"
+    if not vcvars.exists():
+        return None
 
-    By default uses Zig (bundled via ziglang pip package).
-    Pass system=True to prefer the system compiler instead.
-    """
+    env_result = subprocess.run(
+        f'"{vcvars}" && set',
+        capture_output=True, text=True, shell=True,
+    )
+    if env_result.returncode != 0:
+        print(f"[magicbind] warning: vcvars64.bat failed:\n{env_result.stderr.strip()}", file=sys.stderr)
+        return None
+    env: dict[str, str] = {}
+    for line in env_result.stdout.splitlines():
+        if "=" in line:
+            key, _, value = line.partition("=")
+            env[key] = value
+    return env
+
+
+def find_compiler(system: bool = False) -> tuple[list[str], str, dict[str, str] | None]:
+
     if not system:
         zig = _find_zig()
         if zig:
-            return [zig, "c++"], "unix"
+            return [zig, "c++"], "unix", None
         print("[magicbind] warning: ziglang not installed, falling back to system compiler", file=sys.stderr)
 
-    # System compiler path
     if sys.platform == "win32":
-        if cl := shutil.which("cl"):
-            return [cl], "msvc"
+        msvc_env = _msvc_environment()
+        if msvc_env:
+            print("[magicbind] using MSVC (auto-configured via vcvars64.bat)")
+            msvc_path = next((v for k, v in msvc_env.items() if k.upper() == "PATH"), "")
+            cl_path = shutil.which("cl", path=msvc_path)
+            if not cl_path:
+                print("[magicbind] warning: cl.exe not found in MSVC PATH", file=sys.stderr)
+            return [cl_path or "cl"], "msvc", msvc_env
+        if cl_on_path := shutil.which("cl"):
+            return [cl_on_path], "msvc", None
         raise RuntimeError(
-            "No C++ compiler found. Open a Visual Studio Developer Command Prompt "
-            "or run vcvarsall.bat, then retry."
+            "No C++ compiler found. Install Visual Studio Build Tools from "
+            "https://aka.ms/vs/stable/vs_BuildTools.exe"
         )
     for name in ("g++", "c++", "clang++"):
         if path := shutil.which(name):
-            return [path], "unix"
+            return [path], "unix", None
     raise RuntimeError(
         "No C++ compiler found. "
         + ("Install Xcode Command Line Tools: xcode-select --install"
@@ -114,6 +146,14 @@ def _build_unix_cmd(
     )
     compile_flags = [f for f in flags if not f.startswith("-l")]
     link_flags    = [f for f in flags if f.startswith("-l")]
+
+    python_link_flags: list[str] = []
+    if sys.platform == "win32":
+        python_lib_name = f"python{sys.version_info.major}{sys.version_info.minor}"
+        python_link_flags = [
+            f"-L{Path(sys.base_prefix) / 'libs'}",
+            f"-l{python_lib_name}",
+        ]
     return [
         *compiler,
         *link_mode,
@@ -123,6 +163,7 @@ def _build_unix_cmd(
         *compile_flags,
         *sources,
         *link_flags,
+        *python_link_flags,
         "-o", str(output),
     ]
 
@@ -159,7 +200,7 @@ def _build_msvc_cmd(
         f"/Fe:{output}",
         f"/Fo:{output.parent}\\",
         "/link",
-        f"/LIBPATH:{Path(sys.prefix) / 'libs'}",
+        f"/LIBPATH:{Path(sys.base_prefix) / 'libs'}",
         *[f"/LIBPATH:{d}" for d in lib_dirs],
         *lib_names,
     ]
@@ -185,10 +226,10 @@ def pkg_config_flags(packages: list[str]) -> list[str]:
     return result.stdout.split()
 
 
-def _run_cmd(cmd: list[str], verbose: bool = True) -> None:
+def _run_cmd(cmd: list[str], verbose: bool = True, env: dict[str, str] | None = None) -> None:
     if verbose:
         print(f"[build] {' '.join(cmd)}")
-    result = subprocess.run(cmd)
+    result = subprocess.run(cmd, env=env)
     if result.returncode != 0:
         raise SystemExit(result.returncode)
 
@@ -203,7 +244,7 @@ def compile_extension(
     system_compiler: bool = False,
     verbose: bool = True,
 ) -> None:
-    compiler, kind = find_compiler(system=system_compiler)
+    compiler, kind, env = find_compiler(system=system_compiler)
     flags = extra_flags or []
     nb_src = Path(nanobind.source_dir()) / "nb_combined.cpp"
     all_sources = [str(nb_src), str(generated_cpp), *[str(s) for s in sources]]
@@ -215,7 +256,7 @@ def compile_extension(
         "-I", str(header.parent),
     ]
     build = _build_msvc_cmd if kind == "msvc" else _build_unix_cmd
-    _run_cmd(build(compiler, all_sources, includes, flags, output_path), verbose=verbose)
+    _run_cmd(build(compiler, all_sources, includes, flags, output_path), verbose=verbose, env=env)
 
 
 def install_extension(built_path: Path, module_name: str) -> Path:
@@ -238,7 +279,7 @@ def add_command(args: argparse.Namespace) -> int:
 
     build_dir = build_dir_for(module_name)
     build_dir.mkdir(parents=True, exist_ok=True)
-    generated_cpp = build_dir / f"{module_name}.cpp"
+    generated_cpp = build_dir / f"_{module_name}_nb.cpp"
     built_extension = build_dir / f"{module_name}{ext_suffix()}"
 
     extra_flags: list[str] = []
@@ -405,8 +446,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--system-compiler",
         action="store_true",
         default=False,
-        help="Use the system compiler (g++/clang++/cl.exe) instead of Zig. "
-             "Required when linking against system C++ libraries (e.g. OpenCV).",
+        help="Use the system compiler instead of Zig. "
+             "Required when linking against system C++ libraries (e.g. OpenCV). "
+             "On Linux/macOS uses g++/clang++. "
+             "On Windows uses MSVC (cl.exe), auto-discovered via vswhere — "
+             "install Visual Studio Build Tools if not present: https://aka.ms/vs/stable/vs_BuildTools.exe",
     )
     add_parser.set_defaults(func=add_command)
 
