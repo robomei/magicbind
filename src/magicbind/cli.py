@@ -229,8 +229,11 @@ def pkg_config_flags(packages: list[str]) -> list[str]:
 def _run_cmd(cmd: list[str], verbose: bool = True, env: dict[str, str] | None = None) -> None:
     if verbose:
         print(f"[build] {' '.join(cmd)}")
-    result = subprocess.run(cmd, env=env)
+    result = subprocess.run(cmd, capture_output=True, text=True, env=env)
     if result.returncode != 0:
+        output = (result.stdout + result.stderr).strip()
+        if output:
+            print(output, file=sys.stderr)
         raise RuntimeError(f"compiler exited with code {result.returncode}")
 
 
