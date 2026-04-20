@@ -1,6 +1,6 @@
 # simple example
 
-STL-only example: vectors, optional, pair, string.
+STL-only example: `std::vector`, `std::optional`, `std::pair`, `std::string`.
 
 ```bash
 uv run magicbind add cpp/math_utils.h

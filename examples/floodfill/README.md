@@ -1,12 +1,10 @@
 # performance comparison: flood fill
 
-This example demonstrates when moving code to C++ actually makes sense.
+This example shows when C++ actually helps. Many image operations can be written as numpy array ops that run in optimized C internally. Rewriting those in C++ gives little benefit.
 
-Many image operations (brightness, blur, grayscale) can be expressed as numpy array operations that run in optimized C internally. Rewriting those in C++ would give little to no benefit.
+Flood fill for example is different: each pixel to visit depends on the previous step, so the algorithm can't be vectorized. Any Python implementation needs an explicit loop, one iteration per pixel. That's where C++ wins.
 
-Flood fill is different. Each pixel to visit is determined by the result of the previous step, so there is no way to process pixels in parallel or express the algorithm as a batch array operation. numpy has no built-in for it, and any Python implementation requires an explicit loop, one Python iteration per pixel. That is where C++ wins.
-
-Both the Python and C++ versions here use the same BFS algorithm. The only difference is that the C++ version runs the loop in compiled code instead of the Python interpreter.
+Both versions here use the same BFS algorithm, running in the Python interpreter vs. compiled code.
 
 Requires OpenCV (`apt install libopencv-dev` or `brew install opencv`).
 

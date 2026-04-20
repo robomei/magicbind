@@ -8,7 +8,7 @@
 The easy way to speed up Python bottlenecks with C++. No CMake, no build system, no boilerplate. Just point magicbind at your header and it takes care of the rest.
 
 ```bash
-magicbind add mylib.h
+uv run magicbind add mylib.h
 ```
 
 magicbind parses the header, generates [nanobind](https://github.com/wjakob/nanobind) glue code, compiles it with a bundled Zig compiler, and installs the extension into your Python environment.
@@ -37,7 +37,7 @@ inline double sum(const std::vector<double>& values) {
 ```
 
 ```bash
-magicbind add math_utils.h
+uv run magicbind add math_utils.h
 ```
 
 Then use it from Python:
@@ -51,7 +51,7 @@ math_utils.sum([1, 2, 3])  # 6.0
 If the implementation is in a `.cpp` file instead, magicbind auto-detects it. You can also pass sources explicitly:
 
 ```bash
-magicbind add math_utils.h --source math_utils.cpp
+uv run magicbind add math_utils.h --source math_utils.cpp
 ```
 
 ## System libraries (optional)
@@ -59,7 +59,7 @@ magicbind add math_utils.h --source math_utils.cpp
 To use a library installed on your system, pass `--pkg` with its pkg-config name:
 
 ```bash
-magicbind add image_ops.h --pkg opencv4 --system-compiler
+uv run magicbind add image_ops.h --pkg opencv4 --system-compiler
 ```
 
 `--system-compiler` is required when linking against system C++ libraries. The default Zig compiler is great for self-contained code, but system libraries like OpenCV were compiled with a different C++ runtime, so you need the system's g++ or clang++ to match.
@@ -67,7 +67,7 @@ magicbind add image_ops.h --pkg opencv4 --system-compiler
 On Linux and macOS you can use `--pkg` to resolve flags automatically via pkg-config. On Windows, pkg-config is not available; use `--include`, `--lib`, and `--link` to specify paths manually:
 
 ```bash
-magicbind add mylib.h \
+uv run magicbind add mylib.h \
   --include C:\mylib\include \
   --lib C:\mylib\lib \
   --link mylib \
@@ -81,41 +81,31 @@ On Windows, magicbind automatically configures the MSVC build environment via `v
 When you change the header or source, run:
 
 ```bash
-magicbind build          # rebuilds all modules
-magicbind build mylib    # rebuilds one module
+uv run magicbind build          # rebuilds all modules
+uv run magicbind build mylib    # rebuilds one module
 ```
 
 This replays the original `add` command with the same flags and compiler, without you having to remember them.
 
 ## OpenCV
 
-magicbind ships built-in type casters for common OpenCV types. Write normal C++ functions:
+magicbind ships built-in type casters for common OpenCV types:
 
 ```cpp
 // image_ops.h
 #include <opencv2/core.hpp>
-#include <string>
 
 cv::Mat blur(const cv::Mat& src, int kernel_size = 5);
-cv::Mat to_grayscale(const cv::Mat& src);
 cv::Size image_size(const cv::Mat& src);
-cv::Mat crop(const cv::Mat& src, cv::Rect roi);
-cv::Scalar mean_color(const cv::Mat& src);
 ```
-
-And call them from Python with numpy arrays, no manual conversion needed:
 
 ```python
 import numpy as np
 import image_ops
 
 img = np.zeros((480, 640, 3), dtype=np.uint8)
-
-blurred = image_ops.blur(img, 11)                   # numpy array
-gray = image_ops.to_grayscale(img)                  # numpy array
-w, h = image_ops.image_size(img)                    # tuple
-cropped = image_ops.crop(img, (10, 10, 100, 100))   # rect as tuple
-b, g, r, _ = image_ops.mean_color(img)              # scalar as tuple
+blurred = image_ops.blur(img, 11)   # numpy array
+w, h = image_ops.image_size(img)    # tuple
 ```
 
 Supported types: `cv::Mat` ↔ `numpy.ndarray`, `cv::Point` / `cv::Size` / `cv::Rect` / `cv::Scalar` ↔ tuple, and their typed variants (`cv::Point2f`, `cv::Rect2d`, etc.).
