@@ -76,16 +76,20 @@ def magicbind(line: str, cell: str) -> None:
     generated_cpp.write_text(code)
 
     built_extension = build_dir / f"{internal_name}{ext_suffix()}"
-    compile_extension(
-        module_name=internal_name,
-        generated_cpp=generated_cpp,
-        header=header,
-        sources=[],
-        output_path=built_extension,
-        extra_flags=extra_flags,
-        system_compiler=args.system_compiler,
-        verbose=False,
-    )
+    try:
+        compile_extension(
+            module_name=internal_name,
+            generated_cpp=generated_cpp,
+            header=header,
+            sources=[],
+            output_path=built_extension,
+            extra_flags=extra_flags,
+            system_compiler=args.system_compiler,
+            verbose=False,
+        )
+    except RuntimeError as e:
+        print(f"[magicbind] compilation failed: {e}", file=sys.stderr)
+        return
 
     install_extension(built_extension, internal_name)
 
