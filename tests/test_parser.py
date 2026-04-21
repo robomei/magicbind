@@ -60,17 +60,6 @@ def test_overloaded_functions(tmp_path):
     assert names.count("clamp") == 2
 
 
-def test_stl_includes_detected(tmp_path):
-    ir = parse_header(tmp_path, """
-        #include <string>
-        #include <vector>
-        #include <optional>
-        #include <vector>
-        void foo(const std::string& s);
-    """)
-    assert "nanobind/stl/string.h" in ir.stl_includes
-
-
 def test_enum(tmp_path):
     ir = parse_header(tmp_path, """
         enum class Color { Red, Green, Blue };

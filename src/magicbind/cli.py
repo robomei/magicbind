@@ -58,38 +58,24 @@ def _msvc_environment() -> dict[str, str] | None:
     return env
 
 
-def find_compiler(system: bool = False) -> tuple[list[str], str, dict[str, str] | None]:
-
-    if not system:
-        zig = _find_zig()
-        if zig:
-            return [zig, "c++"], "unix", None
-        print("[magicbind] warning: ziglang not installed, falling back to system compiler", file=sys.stderr)
-
+def find_compiler() -> tuple[list[str], str, dict[str, str] | None]:
     if sys.platform == "win32":
         msvc_env = _msvc_environment()
         if msvc_env:
-            print("[magicbind] using MSVC (auto-configured via vcvars64.bat)")
             msvc_path = next((v for k, v in msvc_env.items() if k.upper() == "PATH"), "")
-            cl_path = shutil.which("cl", path=msvc_path)
-            if not cl_path:
-                print("[magicbind] warning: cl.exe not found in MSVC PATH", file=sys.stderr)
-            return [cl_path or "cl"], "msvc", msvc_env
+            if cl_path := shutil.which("cl", path=msvc_path):
+                print("[magicbind] using MSVC (auto-configured via vcvars64.bat)")
+                return [cl_path], "msvc", msvc_env
         if cl_on_path := shutil.which("cl"):
             return [cl_on_path], "msvc", None
-        raise RuntimeError(
-            "No C++ compiler found. Install Visual Studio Build Tools from "
-            "https://aka.ms/vs/stable/vs_BuildTools.exe"
-        )
-    for name in ("g++", "c++", "clang++"):
-        if path := shutil.which(name):
-            return [path], "unix", None
-    raise RuntimeError(
-        "No C++ compiler found. "
-        + ("Install Xcode Command Line Tools: xcode-select --install"
-           if sys.platform == "darwin"
-           else "Install one with: sudo apt install g++")
-    )
+    else:
+        for name in ("g++", "c++", "clang++"):
+            if path := shutil.which(name):
+                return [path], "unix", None
+    zig = _find_zig()
+    if zig:
+        return [zig, "c++"], "unix", None
+    raise RuntimeError("No C++ compiler found.")
 
 
 def ext_suffix() -> str:
@@ -237,6 +223,32 @@ def _run_cmd(cmd: list[str], verbose: bool = True, env: dict[str, str] | None = 
         raise RuntimeError(f"compiler exited with code {result.returncode}")
 
 
+def _nb_combined_obj(compiler: list[str], kind: str, includes: list[str],
+                     env: dict[str, str] | None, verbose: bool) -> Path:
+    nb_ver = nanobind.__version__
+    py_ver = f"{sys.version_info.major}{sys.version_info.minor}"
+    cache_dir = Path(".magicbind") / "cache"
+    obj_ext = ".obj" if kind == "msvc" else ".o"
+    obj = cache_dir / f"nb_combined-{nb_ver}-py{py_ver}{obj_ext}"
+    if obj.exists():
+        return obj
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    nb_src = Path(nanobind.source_dir()) / "nb_combined.cpp"
+    if kind == "msvc":
+        cmd = [*compiler, "/c", "/std:c++20", "/O2", "/EHsc", "/MD",
+               "/DNDEBUG", "/DNB_COMPACT_ASSERTIONS", "/W0", "/nologo",
+               *includes, str(nb_src), f"/Fo:{obj}"]
+    else:
+        pic = sysconfig.get_config_var("CCSHARED") or ""
+        cmd = [*compiler, "-c", "-std=c++20", "-O3", *([pic] if pic else []),
+               "-fvisibility=hidden", "-DNDEBUG", "-DNB_COMPACT_ASSERTIONS", "-w",
+               *includes, str(nb_src), "-o", str(obj)]
+    if verbose:
+        print("[magicbind] compiling nanobind (cached for future builds)...")
+    _run_cmd(cmd, verbose=verbose, env=env)
+    return obj
+
+
 def compile_extension(
     module_name: str,
     generated_cpp: Path,
@@ -244,13 +256,10 @@ def compile_extension(
     sources: list[Path],
     output_path: Path,
     extra_flags: list[str] | None = None,
-    system_compiler: bool = False,
     verbose: bool = True,
 ) -> None:
-    compiler, kind, env = find_compiler(system=system_compiler)
+    compiler, kind, env = find_compiler()
     flags = extra_flags or []
-    nb_src = Path(nanobind.source_dir()) / "nb_combined.cpp"
-    all_sources = [str(nb_src), str(generated_cpp), *[str(s) for s in sources]]
     includes = [
         "-I", str(nanobind.include_dir()),
         "-I", str(detect_robin_map_include()),
@@ -258,6 +267,8 @@ def compile_extension(
         "-I", str(magicbind_include_dir()),
         "-I", str(header.parent),
     ]
+    nb_obj = _nb_combined_obj(compiler, kind, includes, env, verbose)
+    all_sources = [str(nb_obj), str(generated_cpp), *[str(s) for s in sources]]
     build = _build_msvc_cmd if kind == "msvc" else _build_unix_cmd
     _run_cmd(build(compiler, all_sources, includes, flags, output_path), verbose=verbose, env=env)
 
@@ -325,7 +336,6 @@ def add_command(args: argparse.Namespace) -> int:
         sources=sources,
         output_path=built_extension,
         extra_flags=extra_flags,
-        system_compiler=args.system_compiler,
     )
 
     installed_path = install_extension(built_extension, module_name)
@@ -339,7 +349,6 @@ def add_command(args: argparse.Namespace) -> int:
         "link": list(args.link),
         "clang_arg": list(args.clang_arg),
         "module": module_name,
-        "system_compiler": args.system_compiler,
     }
     (build_dir / "config.json").write_text(json.dumps(config, indent=2))
 
@@ -376,7 +385,6 @@ def build_command(args: argparse.Namespace) -> int:
             link=c["link"],
             clang_arg=c["clang_arg"],
             module=c["module"],
-            system_compiler=c.get("system_compiler", False),
         )
         result = add_command(ns)
         if result != 0:
@@ -444,16 +452,6 @@ def build_parser() -> argparse.ArgumentParser:
         default=[],
         metavar="NAME",
         help="Library name to link (e.g. opencv_core). May be passed multiple times.",
-    )
-    add_parser.add_argument(
-        "--system-compiler",
-        action="store_true",
-        default=False,
-        help="Use the system compiler instead of Zig. "
-             "Required when linking against system C++ libraries (e.g. OpenCV). "
-             "On Linux/macOS uses g++/clang++. "
-             "On Windows uses MSVC (cl.exe), auto-discovered via vswhere — "
-             "install Visual Studio Build Tools if not present: https://aka.ms/vs/stable/vs_BuildTools.exe",
     )
     add_parser.set_defaults(func=add_command)
 

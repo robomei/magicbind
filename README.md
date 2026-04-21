@@ -11,7 +11,7 @@ The easy way to speed up Python bottlenecks with C++. No CMake, no build system,
 uv run magicbind add mylib.h
 ```
 
-magicbind parses the header, generates [nanobind](https://github.com/wjakob/nanobind) glue code, compiles it with a bundled Zig compiler, and installs the extension into your Python environment.
+magicbind parses the header, generates [nanobind](https://github.com/wjakob/nanobind) glue code, compiles it, and installs the extension into your Python environment.
 
 ## Install
 
@@ -19,7 +19,7 @@ magicbind parses the header, generates [nanobind](https://github.com/wjakob/nano
 uv add magicbind
 ```
 
-A C++ compiler is bundled via the [ziglang](https://pypi.org/project/ziglang/) package, so you don't need one installed.
+magicbind uses your system compiler (`g++`, `clang++`, or MSVC) if one is available. If not, it falls back to a bundled Zig compiler via the [ziglang](https://pypi.org/project/ziglang/) package.
 
 ## Basic usage
 
@@ -59,10 +59,8 @@ uv run magicbind add math_utils.h --source math_utils.cpp
 To use a library installed on your system, pass `--pkg` with its pkg-config name:
 
 ```bash
-uv run magicbind add image_ops.h --pkg opencv4 --system-compiler
+uv run magicbind add image_ops.h --pkg opencv4
 ```
-
-`--system-compiler` is required when linking against system C++ libraries. The default Zig compiler is great for self-contained code, but system libraries like OpenCV were compiled with a different C++ runtime, so you need the system's g++ or clang++ to match.
 
 On Linux and macOS you can use `--pkg` to resolve flags automatically via pkg-config. On Windows, pkg-config is not available; use `--include`, `--lib`, and `--link` to specify paths manually:
 
@@ -70,8 +68,7 @@ On Linux and macOS you can use `--pkg` to resolve flags automatically via pkg-co
 uv run magicbind add mylib.h \
   --include C:\mylib\include \
   --lib C:\mylib\lib \
-  --link mylib \
-  --system-compiler
+  --link mylib
 ```
 
 On Windows, magicbind automatically configures the MSVC build environment via `vswhere.exe`. Visual Studio or the standalone [Build Tools](https://aka.ms/vs/stable/vs_BuildTools.exe) must be installed (select the "Desktop development with C++" workload).
@@ -135,11 +132,11 @@ math_utils.sum([1.0, 2.0, 3.0])  # 6.0
 
 The module is compiled and imported automatically. Re-running the cell recompiles and reloads. Requires magicbind in your environment.
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/robomei/magicbind/blob/main/examples/notebook/magicbind_demo.ipynb)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/robomei/magicbind/blob/main/examples/notebook/magicbind_colab.ipynb)
 
 ## How it works
 
-magicbind uses libclang to parse the header into an intermediate representation, generates a nanobind binding file, and compiles everything in a single `zig c++` (or system compiler) invocation. Build artifacts go into `.magicbind/build/` and the compiled extension is installed directly into site-packages.
+magicbind uses libclang to parse the header into an intermediate representation, generates a nanobind binding file, and compiles it with your system compiler (`g++`, `clang++` or MSVC), falling back to a bundled Zig compiler if none is found. Build artifacts go into `.magicbind/build/` and the compiled extension is installed directly into site-packages.
 
 ## Templates
 

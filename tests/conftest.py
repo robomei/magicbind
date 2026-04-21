@@ -1,3 +1,4 @@
+import os
 import subprocess
 import sys
 import textwrap
@@ -22,6 +23,13 @@ def parse_header(tmp_path: Path, source: str, extra_args: list[str] | None = Non
         ),
     )
     return walk_tu(tu.cursor, h)
+
+
+def pytest_sessionfinish(session, exitstatus):
+    # nanobind extension modules segfault during interpreter shutdown when
+    # their type registry is cleaned up, bypass normal shutdown on success.
+    if exitstatus == 0:
+        os._exit(0)
 
 
 def generate(tmp_path: Path, source: str, extra_args: list[str] | None = None) -> str:

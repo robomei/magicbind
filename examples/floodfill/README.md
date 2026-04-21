@@ -9,8 +9,8 @@ Both versions here use the same BFS algorithm, running in the Python interpreter
 Requires OpenCV (`apt install libopencv-dev` or `brew install opencv`).
 
 ```bash
-uv run magicbind add cpp/flood_fill.h --pkg opencv4 --system-compiler
-uv run python main.py
+uv run magicbind add cpp/flood_fill.h --pkg opencv4
+uv run main.py
 ```
 
 Example output:

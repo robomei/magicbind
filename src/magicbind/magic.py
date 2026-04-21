@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import importlib
 import shutil
+import subprocess
 import sys
-from pathlib import Path
+from magicbind.cli import _find_zig, find_compiler
 
 from magicbind.cli import (
     build_dir_for,
@@ -21,8 +22,6 @@ def magicbind(line: str, cell: str) -> None:
 
     @magic_arguments()
     @argument("module", help="Python module name for the compiled extension")
-    @argument("--system-compiler", action="store_true", default=False,
-              help="Use the system compiler instead of Zig")
     @argument("--include", action="append", default=[], metavar="DIR",
               help="Additional include directory")
     @argument("--link", action="append", default=[], metavar="NAME",
@@ -84,7 +83,6 @@ def magicbind(line: str, cell: str) -> None:
             sources=[],
             output_path=built_extension,
             extra_flags=extra_flags,
-            system_compiler=args.system_compiler,
             verbose=False,
         )
     except RuntimeError as e:
@@ -102,3 +100,15 @@ def magicbind(line: str, cell: str) -> None:
 
 def load_ipython_extension(ip) -> None:
     ip.register_magic_function(magicbind, magic_kind="cell")
+    try:
+        compiler, _, _ = find_compiler()
+    except RuntimeError:
+        return
+    if compiler[0] == (zig := _find_zig()):
+        print("[magicbind] initializing compiler (zig cc compiles libc on first use — this can take a few minutes)")
+        subprocess.run(
+            [zig, "cc", "-x", "c", "-o", "/dev/null", "-"],
+            input=b"int main(void){return 0;}",
+            capture_output=True,
+        )
+        print("[magicbind] compiler ready")
