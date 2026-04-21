@@ -114,7 +114,7 @@ class Emitter:
             self._indent += 1
             for i, f in enumerate(st.fields):
                 sep = ' + ", " + ' if i < len(st.fields) - 1 else ""
-                self._w(f'std::string("{f.name}=") + std::to_string(v.{f.name}){sep}')
+                self._w(f'std::string("{f.name}=") + nb::cast<std::string>(nb::str(nb::cast(v.{f.name}))){sep}')
             self._indent -= 1
             self._w('+ ")";')
             self._indent -= 1

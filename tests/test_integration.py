@@ -148,6 +148,16 @@ def test_get_element_out_of_range(math_utils):
         math_utils.get_element([1.0, 2.0], 5)
 
 
+def test_invalid_module_name(tmp_path_factory):
+    work = tmp_path_factory.mktemp("invalid_name")
+    r = subprocess.run(
+        [sys.executable, "-m", "magicbind.cli", "add", str(MATH_HEADER), "--module", "bad-name"],
+        capture_output=True, text=True, cwd=work,
+    )
+    assert r.returncode != 0
+    assert "valid Python identifier" in r.stderr
+
+
 def test_rebuild(tmp_path_factory):
     """magicbind build should succeed without re-specifying flags."""
     work = tmp_path_factory.mktemp("rebuild")

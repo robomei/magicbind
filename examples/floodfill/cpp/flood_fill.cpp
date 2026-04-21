@@ -2,7 +2,8 @@
 #include <queue>
 #include <cstdlib>
 
-cv::Mat flood_fill(const cv::Mat& image, int y, int x, uint8_t fill_value, int tolerance) {
+cv::Mat flood_fill(const cv::Mat& image, int y, int x, uint8_t fill_value, int tolerance)
+{
     cv::Mat out = image.clone();
     int seed = image.at<uint8_t>(y, x);
     cv::Mat visited = cv::Mat::zeros(image.rows, image.cols, CV_8UC1);
@@ -13,7 +14,8 @@ cv::Mat flood_fill(const cv::Mat& image, int y, int x, uint8_t fill_value, int t
     const int dy[] = {1, -1, 0, 0};
     const int dx[] = {0,  0, 1,-1};
 
-    while (!q.empty()) {
+    while (!q.empty())
+    {
         auto [cy, cx] = q.front(); q.pop();
         if (cy < 0 || cy >= image.rows || cx < 0 || cx >= image.cols) continue;
         if (visited.at<uint8_t>(cy, cx)) continue;
