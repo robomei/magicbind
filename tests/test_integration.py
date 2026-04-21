@@ -1,5 +1,4 @@
 """Integration tests: full build and import."""
-import importlib
 import subprocess
 import sys
 from pathlib import Path
@@ -27,7 +26,6 @@ def math_utils(tmp_path_factory):
     assert result.returncode == 0, result.stderr + result.stdout
 
     import math_utils
-    importlib.reload(math_utils)
     return math_utils
 
 

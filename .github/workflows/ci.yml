@@ -21,7 +21,7 @@ jobs:
         run: uv sync --group dev
 
       - name: Run tests
-        run: uv run pytest tests/test_parser.py tests/test_codegen.py -v
+        run: uv run pytest -v
 
       - name: Check package builds
         run: uv build

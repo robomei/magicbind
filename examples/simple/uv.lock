@@ -21,7 +21,7 @@ wheels = [
 
 [[package]]
 name = "magicbind"
-version = "0.2.6"
+version = "0.2.7"
 source = { editable = "../../" }
 dependencies = [
     { name = "libclang" },
@@ -112,19 +112,15 @@ wheels = [
 ]
 
 [[package]]
-name = "performance"
+name = "simple-example"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "magicbind" },
-    { name = "numpy" },
 ]
 
 [package.metadata]
-requires-dist = [
-    { name = "magicbind", editable = "../../" },
-    { name = "numpy" },
-]
+requires-dist = [{ name = "magicbind", editable = "../../" }]
 
 [[package]]
 name = "ziglang"

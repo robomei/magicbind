@@ -4,7 +4,7 @@ Renders the Mandelbrot set by iterating each pixel until escape or max iteration
 
 ```bash
 uv run magicbind add cpp/mandelbrot.h
-uv run python main.py
+uv run main.py
 ```
 
 Example output:
