@@ -66,6 +66,15 @@ def test_opencv_header_included(tmp_path):
     assert 'magicbind_opencv.h' in code
 
 
+def test_struct_repr_string_field(tmp_path):
+    code = generate(tmp_path, """
+        #include <string>
+        struct Person { std::string name; int age; };
+    """)
+    assert '__repr__' in code
+    assert 'std::to_string' not in code
+
+
 def test_no_binding_for_private_methods(tmp_path):
     code = generate(tmp_path, """
         class Foo {

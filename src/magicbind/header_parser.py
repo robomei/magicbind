@@ -12,7 +12,6 @@ class IRParam:
     name:     str
     type:     str
     is_const: bool = False
-    is_ptr:   bool = False
     is_ref:   bool = False
 
 @dataclass
@@ -32,7 +31,6 @@ class IRField:
     name:     str
     type:     str
     is_const: bool = False
-    access:   str  = "public"
 
 @dataclass
 class IREnumValue:
@@ -101,7 +99,6 @@ def make_param(cursor: cl.Cursor) -> IRParam:
         name=cursor.spelling or "_",
         type=ts,
         is_const=ts.startswith("const "),
-        is_ptr="*" in ts,
         is_ref="&" in ts,
     )
 
@@ -144,7 +141,6 @@ def collect_class(cursor: cl.Cursor, namespace: str, header: Path) -> IRClass:
                 name=c.spelling,
                 type=ts,
                 is_const=ts.startswith("const "),
-                access=access.name.lower(),
             ))
     return cls
 

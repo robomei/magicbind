@@ -29,7 +29,8 @@ Given a header:
 // math_utils.h
 #include <vector>
 
-inline double sum(const std::vector<double>& values) {
+inline double sum(const std::vector<double>& values) 
+{
     double s = 0;
     for (auto x : values) s += x;
     return s;
@@ -119,7 +120,8 @@ Write C++ directly in a notebook cell:
 %%magicbind math_utils
 #include <vector>
 
-double sum(const std::vector<double>& v) {
+double sum(const std::vector<double>& v)
+{
     double s = 0;
     for (auto x : v) s += x;
     return s;

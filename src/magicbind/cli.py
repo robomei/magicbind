@@ -287,6 +287,9 @@ def add_command(args: argparse.Namespace) -> int:
         return 1
 
     module_name = args.module or header.stem
+    if not module_name.isidentifier():
+        print(f"[error] '{module_name}' is not a valid Python identifier", file=sys.stderr)
+        return 1
     sources = [Path(src).resolve() for src in args.source]
     if not sources:
         sources = auto_sources(header)
